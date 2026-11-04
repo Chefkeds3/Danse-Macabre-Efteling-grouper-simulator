@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Danse Macabre - Medewerker App Simulation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            serif: ['Cinzel', 'serif'],
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            eftelingDark: '#121214',
+            cardBg: '#1e1e24',
+            cardBorder: '#2d2d38',
+            accentBlue: '#3b82f6',
+            accentPink: '#f43f5e',
+            accentPinkHover: '#e11d48',
+            seatEmpty: '#2b2b36',
+            seatEmptyHover: '#3c3c4c',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #0c0c0e;
+      color: #e2e8f0;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .seat-transition {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .pulse-glow {
+      box-shadow: 0 0 18px rgba(244, 63, 94, 0.5);
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #121214;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2b2b36;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between items-center p-2 sm:p-4 font-sans">
+
+  <!-- Main Container -->
+  <div class="w-full max-w-7xl bg-[#18181c] border border-gray-800 rounded-2xl shadow-2xl p-3 sm:p-6 flex flex-col justify-between relative min-h-[720px] mb-4">
+    
+    <!-- Top Header Bar -->
+    <div class="flex justify-between items-center mb-3 px-2 border-b border-gray-800/80 pb-3">
+      <div class="flex items-center gap-3">
+        <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
+        <span class="font-serif text-base sm:text-lg text-amber-100 tracking-wider font-semibold">DANSE MACABRE</span>
+        <!-- Clickable Interactive View Badge -->
+        <button id="viewBadge" onclick="toggleView()" class="text-xs bg-gray-800 text-amber-400 hover:bg-gray-700 hover:text-amber-300 px-3 py-1 rounded-full border border-gray-700 font-medium cursor-pointer transition flex items-center gap-1.5 active:scale-95 shadow-sm" title="Klik om te wisselen van weergave">
+          <span>📱</span> <span id="viewBadgeText">TABLET WEERGAVE</span> <span class="text-[10px] opacity-70">⇄</span>
+        </button>
+      </div>
+      <div class="flex items-center gap-3 text-xs sm:text-sm text-gray-400">
+        <button id="soundToggleBtn" onclick="toggleAudio()" class="hover:text-white flex items-center gap-1.5 bg-gray-800/80 px-3 py-1.5 rounded-lg border border-gray-700 transition">
+          <span id="soundIcon">🔊</span> <span id="soundText" class="hidden sm:inline">Geluid Aan</span>
+        </button>
+        <div class="text-right">
+          <div class="text-[10px] text-gray-500 uppercase">Bezetting</div>
+          <div id="efficiencyScore" class="font-bold text-emerald-400 text-sm">0%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= TABLET VIEW ================= -->
+    <div id="tabletView" class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 my-auto">
+      
+      <!-- LEFT COLUMN: Benches 6, 5, 4 -->
+      <div class="flex flex-col gap-4 justify-between">
+        <!-- Bench 6 -->
+        <div class="relative flex items-center gap-2">
+          <div class="flex flex-col items-center gap-1 shrink-0">
+            <div class="w-8 h-8 rounded-full bg-stone-200 text-stone-900 font-bold flex items-center justify-center text-sm shadow">6</div>
+            <button onclick="event.stopPropagation(); addSingleRiderToBench(6)" class="px-2 py-1.5 bg-amber-500 hover:bg-amber-400 text-stone-950 font-extrabold text-xs rounded-lg shadow border border-amber-300 transition active:scale-95 flex flex-col items-center" title="Single Rider toevoegen aan Koorbank 6">
+              <span>+1</span>
+              <span class="text-[9px] uppercase tracking-tighter">SR</span>
+            </button>
+          </div>
+          <div id="bench-6" class="bench-card flex-1 bg-[#202027] p-3 rounded-xl border border-gray-800 relative cursor-pointer hover:border-gray-700 transition" onclick="tryPlaceCurrentGroup(6)">
+            <div id="seats-bench-6" class="grid grid-cols-6 gap-1.5"></div>
+            <div class="text-center text-[10px] text-gray-500 font-bold tracking-widest mt-2 uppercase">Voorkant</div>
+          </div>
+        </div>
+
+        <!-- Bench 5 -->
+        <div class="relative flex items-center gap-2">
+          <div class="flex flex-col items-center gap-1 shrink-0">
+            <div class="w-8 h-8 rounded-full bg-stone-200 text-stone-900 font-bold flex items-center justify-center text-sm shadow">5</div>
+            <button onclick="event.stopPropagation(); addSingleRiderToBench(5)" class="px-2 py-1.5 bg-amber-500 hover:bg-amber-400 text-stone-950 font-extrabold text-xs rounded-lg shadow border border-amber-300 transition active:scale-95 flex flex-col items-center" title="Single Rider toevoegen aan Koorbank 5">
+              <span>+1</span>
+              <span class="text-[9px] uppercase tracking-tighter">SR</span>
+            </button>
+          </div>
+          <div id="bench-5" class="bench-card flex-1 bg-[#202027] p-3 rounded-xl border border-gray-800 relative cursor-pointer hover:border-gray-700 transition" onclick="tryPlaceCurrentGroup(5)">
+            <div id="seats-bench-5" class="grid grid-cols-6 gap-1.5"></div>
+            <div class="text-center text-[10px] text-gray-500 font-bold tracking-widest mt-2 uppercase">Voorkant</div>
+          </div>
+        </div>
+
+        <!-- Bench 4 -->
+        <div class="relative flex items-center gap-2">
+          <div class="flex flex-col items-center gap-1 shrink-0">
+            <div class="w-8 h-8 rounded-full bg-stone-200 text-stone-900 font-bold flex items-center justify-center text-sm shadow">4</div>
+            <button onclick="event.stopPropagation(); addSingleRiderToBench(4)" class="px-2 py-1.5 bg-amber-500 hover:bg-amber-400 text-stone-950 font-extrabold text-xs rounded-lg shadow border border-amber-300 transition active:scale-95 flex flex-col items-center" title="Single Rider toevoegen aan Koorbank 4">
+              <span>+1</span>
+              <span class="text-[9px] uppercase tracking-tighter">SR</span>
+            </button>
+          </div>
+          <div id="bench-4" class="bench-card flex-1 bg-[#202027] p-3 rounded-xl border border-gray-800 relative cursor-pointer hover:border-gray-700 transition" onclick="tryPlaceCurrentGroup(4)">
+            <div id="seats-bench-4" class="grid grid-cols-6 gap-1.5"></div>
+            <div class="text-center text-[10px] text-gray-500 font-bold tracking-widest mt-2 uppercase">Voorkant</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTER DASHBOARD -->
+      <div class="flex flex-col justify-between gap-4">
+        <div class="bg-[#22222a] p-5 rounded-xl border border-gray-800 flex-1 flex flex-col justify-between shadow-lg">
+          <div>
+            <div class="flex justify-between items-start mb-3">
+              <div>
+                <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">Totaal Bezetting</div>
+                <h2 id="totalCounter" class="text-3xl font-bold font-serif text-white tracking-wide mt-1">0 / 108</h2>
+              </div>
+              <button onclick="openSettingsModal()" class="text-gray-400 hover:text-white transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+              </button>
+            </div>
+
+            <!-- Queue Indicator -->
+            <div class="mt-3">
+              <div class="text-xs text-gray-400 uppercase tracking-wider mb-2 font-semibold">Wachtrij Status</div>
+              <div class="bg-gradient-to-r from-blue-950/60 to-indigo-950/60 border border-blue-500/40 rounded-xl p-4 flex items-center justify-between shadow-inner">
+                <div>
+                  <div class="text-xs text-blue-300 font-medium">Volgende groep:</div>
+                  <div class="text-2xl font-bold text-white flex items-center gap-3 mt-1">
+                    <span id="groupSizeBadge" class="bg-blue-600 text-white w-10 h-10 rounded-full inline-flex items-center justify-center text-xl font-bold shadow">4</span>
+                    <span>Personen</span>
+                  </div>
+                </div>
+                <button onclick="skipGroup()" title="Wissel groep als deze niet past" class="px-3.5 py-2 bg-blue-900/40 hover:bg-blue-800/60 text-blue-200 text-xs rounded-lg border border-blue-600/40 transition font-semibold">
+                  Wissel ↻
+                </button>
+              </div>
+            </div>
+
+            <!-- Single Rider Info Note -->
+            <div class="mt-3 bg-amber-950/30 border border-amber-500/30 rounded-xl p-3 flex items-center gap-3">
+              <span class="text-xl">👤</span>
+              <div class="text-xs text-amber-200/80">
+                <span class="font-bold text-amber-300 block">Single Riders Toewijzen:</span>
+                Gebruik de <span class="bg-amber-500 text-stone-950 font-bold px-1.5 py-0.5 rounded text-[10px]">+1 SR</span> knop direct bij de gewenste koorbank.
+              </div>
+            </div>
+          </div>
+
+          <!-- Single Rider Helper Action Button -->
+          <div class="mt-4">
+            <button onclick="fillSingleRidersCurrentRow()" class="w-full py-2.5 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 text-sm rounded-xl border border-amber-500/40 font-semibold transition flex items-center justify-center gap-2 active:scale-[0.99]">
+              <span>⚡ Vul eerstvolgende actieve rij met Single Riders</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dispatch Button -->
+        <button id="dispatchBtn" onclick="dispatchRide()" class="w-full py-4 bg-accentPink hover:bg-accentPinkHover text-white font-bold text-lg rounded-xl shadow-lg transition duration-200 flex items-center justify-center gap-2 active:scale-[0.98]">
+          <span>Volgende ronde &gt;</span>
+        </button>
+      </div>
+
+      <!-- RIGHT COLUMN: Benches 1, 2, 3 -->
+      <div class="flex flex-col gap-4 justify-between">
+        <!-- Bench 1 -->
+        <div class="relative flex items-center gap-2">
+          <div id="bench-1" class="bench-card flex-1 bg-[#202027] p-3 rounded-xl border border-gray-800 relative cursor-pointer hover:border-gray-700 transition" onclick="tryPlaceCurrentGroup(1)">
+            <div id="seats-bench-1" class="grid grid-cols-6 gap-1.5"></div>
+            <div class="text-center text-[10px] text-gray-500 font-bold tracking-widest mt-2 uppercase">Voorkant</div>
+          </div>
+          <div class="flex flex-col items-center gap-1 shrink-0">
+            <div class="w-8 h-8 rounded-full bg-stone-200 text-stone-900 font-bold flex items-center justify-center text-sm shadow">1</div>
+            <button onclick="event.stopPropagation(); addSingleRiderToBench(1)" class="px-2 py-1.5 bg-amber-500 hover:bg-amber-400 text-stone-950 font-extrabold text-xs rounded-lg shadow border border-amber-300 transition active:scale-95 flex flex-col items-center" title="Single Rider toevoegen aan Koorbank 1">
+              <span>+1</span>
+              <span class="text-[9px] uppercase tracking-tighter">SR</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Bench 2 -->
+        <div class="relative flex items-center gap-2">
+          <div id="bench-2" class="bench-card flex-1 bg-[#202027] p-3 rounded-xl border border-gray-800 relative cursor-pointer hover:border-gray-700 transition" onclick="tryPlaceCurrentGroup(2)">
+            <div id="seats-bench-2" class="grid grid-cols-6 gap-1.5"></div>
+            <div class="text-center text-[10px] text-gray-500 font-bold tracking-widest mt-2 uppercase">Voorkant</div>
+          </div>
+          <div class="flex flex-col items-center gap-1 shrink-0">
+            <div class="w-8 h-8 rounded-full bg-stone-200 text-stone-900 font-bold flex items-center justify-center text-sm shadow">2</div>
+            <button onclick="event.stopPropagation(); addSingleRiderToBench(2)" class="px-2 py-1.5 bg-amber-500 hover:bg-amber-400 text-stone-950 font-extrabold text-xs rounded-lg shadow border border-amber-300 transition active:scale-95 flex flex-col items-center" title="Single Rider toevoegen aan Koorbank 2">
+              <span>+1</span>
+              <span class="text-[9px] uppercase tracking-tighter">SR</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Bench 3 -->
+        <div class="relative flex items-center gap-2">
+          <div id="bench-3" class="bench-card flex-1 bg-[#202027] p-3 rounded-xl border border-gray-800 relative cursor-pointer hover:border-gray-700 transition" onclick="tryPlaceCurrentGroup(3)">
+            <div id="seats-bench-3" class="grid grid-cols-6 gap-1.5"></div>
+            <div class="text-center text-[10px] text-gray-500 font-bold tracking-widest mt-2 uppercase">Voorkant</div>
+          </div>
+          <div class="flex flex-col items-center gap-1 shrink-0">
+            <div class="w-8 h-8 rounded-full bg-stone-200 text-stone-900 font-bold flex items-center justify-center text-sm shadow">3</div>
+            <button onclick="event.stopPropagation(); addSingleRiderToBench(3)" class="px-2 py-1.5 bg-amber-500 hover:bg-amber-400 text-stone-950 font-extrabold text-xs rounded-lg shadow border border-amber-300 transition active:scale-95 flex flex-col items-center" title="Single Rider toevoegen aan Koorbank 3">
+              <span>+1</span>
+              <span class="text-[9px] uppercase tracking-tighter">SR</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ================= MOBILE VIEW ================= -->
+    <div id="mobileView" class="hidden flex-col gap-4 my-auto max-w-md mx-auto w-full">
+      
+      <!-- TOP: Compact Overview of all 6 Benches (3x2 Grid) -->
+      <div class="bg-[#202027] p-3 rounded-xl border border-gray-800 space-y-3">
+        <div class="flex justify-between items-center px-1">
+          <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">Overzicht Koorbanken (1-6)</div>
+          <div id="mobileCounter" class="text-xs font-bold text-amber-400">0 / 108</div>
+        </div>
+        
+        <!-- Grid of 6 Mini Benches in 3x2 (2 Columns, 3 Rows) -->
+        <div class="grid grid-cols-2 gap-2">
+          <div id="mobileBench-1" class="bg-[#18181c] p-2 rounded-lg border border-gray-700/60 relative">
+            <div class="flex justify-between items-center text-[11px] font-bold mb-1 text-gray-300">
+              <span onclick="tryPlaceCurrentGroup(1)" class="cursor-pointer hover:text-blue-400">Koorbank 1</span>
+              <button onclick="addSingleRiderToBench(1)" class="px-1.5 py-0.5 bg-amber-500 hover:bg-amber-400 text-stone-950 text-[10px] font-extrabold rounded shadow">
+                +1 SR
+              </button>
+            </div>
+            <div id="mobileSeats-1" onclick="tryPlaceCurrentGroup(1)" class="grid grid-cols-6 gap-0.5 cursor-pointer"></div>
+          </div>
+
+          <div id="mobileBench-2" class="bg-[#18181c] p-2 rounded-lg border border-gray-700/60 relative">
+            <div class="flex justify-between items-center text-[11px] font-bold mb-1 text-gray-300">
+              <span onclick="tryPlaceCurrentGroup(2)" class="cursor-pointer hover:text-blue-400">Koorbank 2</span>
+              <button onclick="addSingleRiderToBench(2)" class="px-1.5 py-0.5 bg-amber-500 hover:bg-amber-400 text-stone-950 text-[10px] font-extrabold rounded shadow">
+                +1 SR
+              </button>
+            </div>
+            <div id="mobileSeats-2" onclick="tryPlaceCurrentGroup(2)" class="grid grid-cols-6 gap-0.5 cursor-pointer"></div>
+          </div>
+
+          <div id="mobileBench-3" class="bg-[#18181c] p-2 rounded-lg border border-gray-700/60 relative">
+            <div class="flex justify-between items-center text-[11px] font-bold mb-1 text-gray-300">
+              <span onclick="tryPlaceCurrentGroup(3)" class="cursor-pointer hover:text-blue-400">Koorbank 3</span>
+              <button onclick="addSingleRiderToBench(3)" class="px-1.5 py-0.5 bg-amber-500 hover:bg-amber-400 text-stone-950 text-[10px] font-extrabold rounded shadow">
+                +1 SR
+              </button>
+            </div>
+            <div id="mobileSeats-3" onclick="tryPlaceCurrentGroup(3)" class="grid grid-cols-6 gap-0.5 cursor-pointer"></div>
+          </div>
+
+          <div id="mobileBench-4" class="bg-[#18181c] p-2 rounded-lg border border-gray-700/60 relative">
+            <div class="flex justify-between items-center text-[11px] font-bold mb-1 text-gray-300">
+              <span onclick="tryPlaceCurrentGroup(4)" class="cursor-pointer hover:text-blue-400">Koorbank 4</span>
+              <button onclick="addSingleRiderToBench(4)" class="px-1.5 py-0.5 bg-amber-500 hover:bg-amber-400 text-stone-950 text-[10px] font-extrabold rounded shadow">
+                +1 SR
+              </button>
+            </div>
+            <div id="mobileSeats-4" onclick="tryPlaceCurrentGroup(4)" class="grid grid-cols-6 gap-0.5 cursor-pointer"></div>
+          </div>
+
+          <div id="mobileBench-5" class="bg-[#18181c] p-2 rounded-lg border border-gray-700/60 relative">
+            <div class="flex justify-between items-center text-[11px] font-bold mb-1 text-gray-300">
+              <span onclick="tryPlaceCurrentGroup(5)" class="cursor-pointer hover:text-blue-400">Koorbank 5</span>
+              <button onclick="addSingleRiderToBench(5)" class="px-1.5 py-0.5 bg-amber-500 hover:bg-amber-400 text-stone-950 text-[10px] font-extrabold rounded shadow">
+                +1 SR
+              </button>
+            </div>
+            <div id="mobileSeats-5" onclick="tryPlaceCurrentGroup(5)" class="grid grid-cols-6 gap-0.5 cursor-pointer"></div>
+          </div>
+
+          <div id="mobileBench-6" class="bg-[#18181c] p-2 rounded-lg border border-gray-700/60 relative">
+            <div class="flex justify-between items-center text-[11px] font-bold mb-1 text-gray-300">
+              <span onclick="tryPlaceCurrentGroup(6)" class="cursor-pointer hover:text-blue-400">Koorbank 6</span>
+              <button onclick="addSingleRiderToBench(6)" class="px-1.5 py-0.5 bg-amber-500 hover:bg-amber-400 text-stone-950 text-[10px] font-extrabold rounded shadow">
+                +1 SR
+              </button>
+            </div>
+            <div id="mobileSeats-6" onclick="tryPlaceCurrentGroup(6)" class="grid grid-cols-6 gap-0.5 cursor-pointer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MIDDLE: Next Group Info -->
+      <div class="bg-[#22222a] p-4 rounded-xl border border-gray-800 flex items-center justify-between shadow-md">
+        <div class="flex items-center gap-3">
+          <span id="mobileGroupSizeBadge" class="bg-blue-600 text-white w-12 h-12 rounded-full inline-flex items-center justify-center text-xl font-bold shadow-lg">4</span>
+          <div>
+            <div class="text-xs text-gray-400">Volgende groep:</div>
+            <div class="text-base font-bold text-white">Selecteer hieronder een koorbank</div>
+          </div>
+        </div>
+        <button onclick="skipGroup()" class="px-3 py-2 bg-blue-900/40 hover:bg-blue-800/60 text-blue-200 text-xs rounded-lg border border-blue-600/40 transition font-semibold">
+          Wissel ↻
+        </button>
+      </div>
+
+      <!-- BOTTOM: 6 BENCHES WITH INTEGRATED SINGLE RIDER BUTTONS IN 3x2 GRID -->
+      <div class="space-y-2">
+        <div class="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">Plaats op Koorbank:</div>
+        
+        <!-- 3x2 Grid of Controls (2 columns, 3 rows) -->
+        <div class="grid grid-cols-2 gap-2">
+          <!-- Bench 1 -->
+          <div class="flex gap-1">
+            <button onclick="tryPlaceCurrentGroup(1)" class="flex-1 py-2.5 bg-blue-600/30 hover:bg-blue-600/50 active:scale-95 border border-blue-500/50 rounded-xl text-white font-bold text-sm flex flex-col items-center justify-center transition">
+              <span>Koorbank 1</span>
+              <span id="mobileBtnSub-1" class="text-[10px] text-blue-300 font-normal">Rij 1</span>
+            </button>
+            <button onclick="addSingleRiderToBench(1)" class="px-3 bg-amber-500 hover:bg-amber-400 active:scale-95 text-stone-950 font-extrabold text-xs rounded-xl shadow border border-amber-300 flex flex-col items-center justify-center transition" title="Single Rider toevoegen aan Koorbank 1">
+              <span>+1</span>
+              <span class="text-[9px]">SR</span>
+            </button>
+          </div>
+
+          <!-- Bench 2 -->
+          <div class="flex gap-1">
+            <button onclick="tryPlaceCurrentGroup(2)" class="flex-1 py-2.5 bg-blue-600/30 hover:bg-blue-600/50 active:scale-95 border border-blue-500/50 rounded-xl text-white font-bold text-sm flex flex-col items-center justify-center transition">
+              <span>Koorbank 2</span>
+              <span id="mobileBtnSub-2" class="text-[10px] text-blue-300 font-normal">Rij 1</span>
+            </button>
+            <button onclick="addSingleRiderToBench(2)" class="px-3 bg-amber-500 hover:bg-amber-400 active:scale-95 text-stone-950 font-extrabold text-xs rounded-xl shadow border border-amber-300 flex flex-col items-center justify-center transition" title="Single Rider toevoegen aan Koorbank 2">
+              <span>+1</span>
+              <span class="text-[9px]">SR</span>
+            </button>
+          </div>
+
+          <!-- Bench 3 -->
+          <div class="flex gap-1">
+            <button onclick="tryPlaceCurrentGroup(3)" class="flex-1 py-2.5 bg-blue-600/30 hover:bg-blue-600/50 active:scale-95 border border-blue-500/50 rounded-xl text-white font-bold text-sm flex flex-col items-center justify-center transition">
+              <span>Koorbank 3</span>
+              <span id="mobileBtnSub-3" class="text-[10px] text-blue-300 font-normal">Rij 1</span>
+            </button>
+            <button onclick="addSingleRiderToBench(3)" class="px-3 bg-amber-500 hover:bg-amber-400 active:scale-95 text-stone-950 font-extrabold text-xs rounded-xl shadow border border-amber-300 flex flex-col items-center justify-center transition" title="Single Rider toevoegen aan Koorbank 3">
+              <span>+1</span>
+              <span class="text-[9px]">SR</span>
+            </button>
+          </div>
+
+          <!-- Bench 4 -->
+          <div class="flex gap-1">
+            <button onclick="tryPlaceCurrentGroup(4)" class="flex-1 py-2.5 bg-blue-600/30 hover:bg-blue-600/50 active:scale-95 border border-blue-500/50 rounded-xl text-white font-bold text-sm flex flex-col items-center justify-center transition">
+              <span>Koorbank 4</span>
+              <span id="mobileBtnSub-4" class="text-[10px] text-blue-300 font-normal">Rij 1</span>
+            </button>
+            <button onclick="addSingleRiderToBench(4)" class="px-3 bg-amber-500 hover:bg-amber-400 active:scale-95 text-stone-950 font-extrabold text-xs rounded-xl shadow border border-amber-300 flex flex-col items-center justify-center transition" title="Single Rider toevoegen aan Koorbank 4">
+              <span>+1</span>
+              <span class="text-[9px]">SR</span>
+            </button>
+          </div>
+
+          <!-- Bench 5 -->
+          <div class="flex gap-1">
+            <button onclick="tryPlaceCurrentGroup(5)" class="flex-1 py-2.5 bg-blue-600/30 hover:bg-blue-600/50 active:scale-95 border border-blue-500/50 rounded-xl text-white font-bold text-sm flex flex-col items-center justify-center transition">
+              <span>Koorbank 5</span>
+              <span id="mobileBtnSub-5" class="text-[10px] text-blue-300 font-normal">Rij 1</span>
+            </button>
+            <button onclick="addSingleRiderToBench(5)" class="px-3 bg-amber-500 hover:bg-amber-400 active:scale-95 text-stone-950 font-extrabold text-xs rounded-xl shadow border border-amber-300 flex flex-col items-center justify-center transition" title="Single Rider toevoegen aan Koorbank 5">
+              <span>+1</span>
+              <span class="text-[9px]">SR</span>
+            </button>
+          </div>
+
+          <!-- Bench 6 -->
+          <div class="flex gap-1">
+            <button onclick="tryPlaceCurrentGroup(6)" class="flex-1 py-2.5 bg-blue-600/30 hover:bg-blue-600/50 active:scale-95 border border-blue-500/50 rounded-xl text-white font-bold text-sm flex flex-col items-center justify-center transition">
+              <span>Koorbank 6</span>
+              <span id="mobileBtnSub-6" class="text-[10px] text-blue-300 font-normal">Rij 1</span>
+            </button>
+            <button onclick="addSingleRiderToBench(6)" class="px-3 bg-amber-500 hover:bg-amber-400 active:scale-95 text-stone-950 font-extrabold text-xs rounded-xl shadow border border-amber-300 flex flex-col items-center justify-center transition" title="Single Rider toevoegen aan Koorbank 6">
+              <span>+1</span>
+              <span class="text-[9px]">SR</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Mobile Dispatch Ride Button -->
+        <button id="mobileDispatchBtn" onclick="dispatchRide()" class="w-full py-3.5 mt-2 bg-accentPink hover:bg-accentPinkHover text-white font-bold text-base rounded-xl shadow-lg transition flex items-center justify-center gap-2 active:scale-[0.98]">
+          <span>Volgende ronde &gt;</span>
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- Instructions / Rules Footer -->
+    <div class="mt-4 pt-3 border-t border-gray-800/80 flex flex-wrap justify-between items-center text-xs text-gray-500 gap-2">
+      <div class="flex items-center gap-4">
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-blue-600 inline-block"></span> Groep Gasten</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-500 inline-block"></span> Single Rider</span>
+      </div>
+      <div>Klik bovenaan op de weergave-badge om te wisselen tussen Tablet & Mobiel.</div>
+    </div>
+  </div>
+
+  <!-- Dispatch Modal / Ride Animation Overlay -->
+  <div id="rideModal" class="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center hidden p-4">
+    <div class="text-center max-w-lg space-y-6">
+      <div class="text-amber-500 font-serif text-3xl sm:text-4xl tracking-widest animate-pulse font-bold">DANSE MACABRE</div>
+      <div class="w-32 h-32 mx-auto relative flex items-center justify-center">
+        <div class="absolute inset-0 border-4 border-amber-600/30 border-t-amber-500 rounded-full animate-spin"></div>
+        <span class="text-5xl">🎻</span>
+      </div>
+      <p class="text-gray-300 font-serif text-lg">De koorbanken draaien en stijgen in de abdijruïne...</p>
+      <div id="rideStats" class="bg-gray-900 p-4 rounded-xl border border-gray-800 text-sm text-gray-400 space-y-1">
+        <div>Totaal Gevuld: <span id="statFilled" class="text-white font-bold">0</span> / 108 plaatsen</div>
+        <div>Efficiëntie: <span id="statEff" class="text-emerald-400 font-bold">0%</span></div>
+      </div>
+      <button onclick="finishRide()" class="px-8 py-3 bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold rounded-xl transition shadow-lg text-base">
+        Start Nieuwe Laadronde
+      </button>
+    </div>
+  </div>
+
+  <!-- Generic Notification Toast -->
+  <div id="toast" class="fixed top-6 left-1/2 -translate-x-1/2 bg-gray-900 border border-gray-700 text-white px-5 py-2.5 rounded-xl shadow-2xl transition duration-300 opacity-0 pointer-events-none z-50 text-sm font-medium">
+    Bericht
+  </div>
+
+  <!-- Custom Dialog Modal -->
+  <div id="customModal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-[#1e1e24] border border-gray-700 rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4">
+      <h3 id="modalTitle" class="text-lg font-bold text-white font-serif"></h3>
+      <p id="modalBody" class="text-sm text-gray-300"></p>
+      <button onclick="closeCustomModal()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg text-sm transition">
+        Begrepen
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Audio Context Setup
+    let audioEnabled = true;
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playBeep(freq = 440, duration = 0.08, type = 'sine') {
+      if (!audioEnabled) return;
+      try {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function toggleAudio() {
+      audioEnabled = !audioEnabled;
+      document.getElementById('soundIcon').innerText = audioEnabled ? '🔊' : '🔇';
+      document.getElementById('soundText').innerText = audioEnabled ? 'Geluid Aan' : 'Geluid Uit';
+      if (audioEnabled) playBeep(600, 0.1);
+    }
+
+    // App State Management
+    const TOTAL_SEATS = 108;
+    const BENCH_COUNT = 6;
+    const SEATS_PER_BENCH = 18;
+    const SEATS_PER_ROW = 6;
+
+    let benches = {};
+    let activeRowIndex = {}; // Stores current open row per bench (0, 1, or 2)
+    let currentGroupSize = 4;
+    let totalFilledSeats = 0;
+    let currentGroupId = 1;
+    let activeView = 'tablet';
+
+    function toggleView() {
+      const nextView = activeView === 'tablet' ? 'mobile' : 'tablet';
+      switchView(nextView);
+      playBeep(480, 0.06);
+    }
+
+    function switchView(view) {
+      activeView = view;
+      const tabletView = document.getElementById('tabletView');
+      const mobileView = document.getElementById('mobileView');
+      const badgeText = document.getElementById('viewBadgeText');
+
+      if (view === 'mobile') {
+        tabletView.classList.add('hidden');
+        mobileView.classList.remove('hidden');
+        mobileView.classList.add('flex');
+        
+        if (badgeText) badgeText.innerText = "MOBIELE WEERGAVE";
+        showToast("Gewisseld naar Mobiele weergave");
+      } else {
+        mobileView.classList.add('hidden');
+        mobileView.classList.remove('flex');
+        tabletView.classList.remove('hidden');
+
+        if (badgeText) badgeText.innerText = "TABLET WEERGAVE";
+        showToast("Gewisseld naar Tablet weergave");
+      }
+      renderAllBenches();
+    }
+
+    function initBenches() {
+      benches = {};
+      activeRowIndex = {};
+      totalFilledSeats = 0;
+      currentGroupId = 1;
+
+      for (let b = 1; b <= BENCH_COUNT; b++) {
+        benches[b] = Array(SEATS_PER_BENCH).fill(null).map(() => ({
+          occupied: false,
+          type: null,
+          groupId: null
+        }));
+        activeRowIndex[b] = 0;
+      }
+
+      generateNextGroup();
+      renderAllBenches();
+      updateCounter();
+    }
+
+    function generateNextGroup() {
+      const possibleSizes = [2, 2, 3, 3, 4, 4, 5, 6];
+      currentGroupSize = possibleSizes[Math.floor(Math.random() * possibleSizes.length)];
+      
+      const badge1 = document.getElementById('groupSizeBadge');
+      const badge2 = document.getElementById('mobileGroupSizeBadge');
+      
+      if (badge1) badge1.innerText = currentGroupSize;
+      if (badge2) badge2.innerText = currentGroupSize;
+    }
+
+    function skipGroup() {
+      generateNextGroup();
+      playBeep(300, 0.05);
+      showToast("Volgende groep gewisseld");
+    }
+
+    // Direct Single Rider placement per specific bench
+    function addSingleRiderToBench(benchNum) {
+      if (totalFilledSeats >= TOTAL_SEATS) {
+        showToast("Attractie is al volledig gevuld!");
+        return;
+      }
+
+      let r = activeRowIndex[benchNum];
+      if (r > 2) {
+        showToast(`Koorbank ${benchNum} is al volledig bezet!`);
+        playBeep(200, 0.1, 'sawtooth');
+        return;
+      }
+
+      const rowStartIdx = r * SEATS_PER_ROW;
+      const rowEndIdx = rowStartIdx + SEATS_PER_ROW;
+
+      let placed = false;
+      for (let i = rowStartIdx; i < rowEndIdx; i++) {
+        if (!benches[benchNum][i].occupied) {
+          benches[benchNum][i] = {
+            occupied: true,
+            type: 'single',
+            groupId: 888
+          };
+          totalFilledSeats++;
+          placed = true;
+          playBeep(650, 0.08);
+          showToast(`Single Rider geplaatst op Koorbank ${benchNum} (Rij ${r + 1})`);
+          break;
+        }
+      }
+
+      if (placed) {
+        checkAndAutoFillSingleRider(benchNum, r);
+        updateBenchRowProgress(benchNum, r);
+        renderAllBenches();
+        updateCounter();
+      }
+    }
+
+    function renderAllBenches() {
+      // 1. Render Tablet Full Benches
+      for (let b = 1; b <= BENCH_COUNT; b++) {
+        const benchEl = document.getElementById(`seats-bench-${b}`);
+        if (!benchEl) continue;
+
+        benchEl.innerHTML = '';
+        const benchData = benches[b];
+
+        for (let i = 0; i < SEATS_PER_BENCH; i++) {
+          const seatData = benchData[i];
+          const seatNum = i + 1;
+          const rowNum = Math.floor(i / SEATS_PER_ROW);
+
+          const seatBtn = document.createElement('div');
+          seatBtn.className = `seat-transition h-9 rounded-md flex items-center justify-center font-bold text-xs select-none shadow-sm relative `;
+
+          if (seatData.occupied) {
+            if (seatData.type === 'single') {
+              seatBtn.className += 'bg-amber-500 text-stone-950 border border-amber-300';
+              seatBtn.innerText = seatNum;
+              seatBtn.title = "Single Rider";
+            } else {
+              seatBtn.className += 'bg-blue-600 text-white border border-blue-400/30';
+              seatBtn.innerText = seatNum;
+              seatBtn.title = `Groep ${seatData.groupId}`;
+            }
+          } else {
+            const isRowLocked = rowNum < activeRowIndex[b];
+            if (isRowLocked) {
+              seatBtn.className += 'bg-stone-900 text-stone-700 border border-stone-800 cursor-not-allowed';
+            } else {
+              seatBtn.className += 'bg-seatEmpty text-stone-400 border border-gray-700/50 hover:bg-seatEmptyHover hover:text-white cursor-pointer';
+            }
+            seatBtn.innerText = seatNum;
+          }
+
+          benchEl.appendChild(seatBtn);
+        }
+      }
+
+      // 2. Render Mobile Mini-Overview Benches
+      for (let b = 1; b <= BENCH_COUNT; b++) {
+        const mobileSeatsEl = document.getElementById(`mobileSeats-${b}`);
+        const subBtnEl = document.getElementById(`mobileBtnSub-${b}`);
+
+        if (mobileSeatsEl) {
+          mobileSeatsEl.innerHTML = '';
+
+          for (let i = 0; i < SEATS_PER_BENCH; i++) {
+            const sData = benches[b][i];
+            const mSeat = document.createElement('div');
+            mSeat.className = 'h-3 rounded-sm transition-all ';
+
+            if (sData.occupied) {
+              mSeat.className += sData.type === 'single' ? 'bg-amber-500' : 'bg-blue-500';
+            } else {
+              const r = Math.floor(i / SEATS_PER_ROW);
+              mSeat.className += r < activeRowIndex[b] ? 'bg-stone-900' : 'bg-stone-700/50';
+            }
+            mobileSeatsEl.appendChild(mSeat);
+          }
+          
+          if (subBtnEl) {
+            const curRow = activeRowIndex[b];
+            subBtnEl.innerText = curRow > 2 ? 'VOL' : `Actief: Rij ${curRow + 1}`;
+          }
+        }
+      }
+    }
+
+    function tryPlaceCurrentGroup(benchNum) {
+      if (totalFilledSeats >= TOTAL_SEATS) {
+        showToast("Attractie is al volledig gevuld! Klik op 'Volgende ronde >'");
+        return;
+      }
+
+      let currentRow = activeRowIndex[benchNum];
+      
+      if (currentRow > 2) {
+        showToast(`Koorbank ${benchNum} is al volledig bezet!`);
+        playBeep(200, 0.1, 'sawtooth');
+        return;
+      }
+
+      const rowStartIdx = currentRow * SEATS_PER_ROW;
+      const rowEndIdx = rowStartIdx + SEATS_PER_ROW;
+      
+      let occupiedCountInRow = 0;
+      let firstEmptyIndex = -1;
+
+      for (let i = rowStartIdx; i < rowEndIdx; i++) {
+        if (benches[benchNum][i].occupied) {
+          occupiedCountInRow++;
+        } else if (firstEmptyIndex === -1) {
+          firstEmptyIndex = i;
+        }
+      }
+
+      const freeSeatsInRow = SEATS_PER_ROW - occupiedCountInRow;
+
+      if (currentGroupSize > freeSeatsInRow) {
+        if (freeSeatsInRow === 0 || occupiedCountInRow > 0) {
+          if (currentRow < 2) {
+            activeRowIndex[benchNum]++;
+            showToast(`Rij ${currentRow + 1} gesloten. Koorbank ${benchNum} gaat naar Rij ${currentRow + 2}.`);
+            tryPlaceCurrentGroup(benchNum);
+            return;
+          }
+        }
+        
+        showToast(`Groep van ${currentGroupSize} past niet op rij ${currentRow + 1} (${freeSeatsInRow} vrij).`);
+        playBeep(200, 0.1, 'sawtooth');
+        return;
+      }
+
+      for (let i = 0; i < currentGroupSize; i++) {
+        const targetIndex = firstEmptyIndex + i;
+        benches[benchNum][targetIndex] = {
+          occupied: true,
+          type: 'group',
+          groupId: currentGroupId
+        };
+        totalFilledSeats++;
+      }
+
+      currentGroupId++;
+      playBeep(520, 0.08);
+
+      checkAndAutoFillSingleRider(benchNum, currentRow);
+      updateBenchRowProgress(benchNum, currentRow);
+
+      generateNextGroup();
+      renderAllBenches();
+      updateCounter();
+    }
+
+    function checkAndAutoFillSingleRider(benchNum, rowIdx) {
+      const rowStartIdx = rowIdx * SEATS_PER_ROW;
+      const rowEndIdx = rowStartIdx + SEATS_PER_ROW;
+      
+      let filledInRow = 0;
+      let emptyIdx = -1;
+
+      for (let i = rowStartIdx; i < rowEndIdx; i++) {
+        if (benches[benchNum][i].occupied) {
+          filledInRow++;
+        } else {
+          emptyIdx = i;
+        }
+      }
+
+      if (filledInRow === 5 && emptyIdx !== -1) {
+        benches[benchNum][emptyIdx] = {
+          occupied: true,
+          type: 'single',
+          groupId: 888
+        };
+        totalFilledSeats++;
+        showToast("5 stoelen gevuld: 6e stoel automatisch Single Rider!");
+        playBeep(700, 0.08);
+      }
+    }
+
+    function updateBenchRowProgress(benchNum, rowIdx) {
+      const rowStartIdx = rowIdx * SEATS_PER_ROW;
+      const rowEndIdx = rowStartIdx + SEATS_PER_ROW;
+      
+      let allFilled = true;
+      for (let i = rowStartIdx; i < rowEndIdx; i++) {
+        if (!benches[benchNum][i].occupied) {
+          allFilled = false;
+          break;
+        }
+      }
+
+      if (allFilled && activeRowIndex[benchNum] === rowIdx) {
+        activeRowIndex[benchNum]++;
+      }
+    }
+
+    function fillSingleRidersCurrentRow() {
+      let filledAny = false;
+
+      for (let b = 1; b <= BENCH_COUNT; b++) {
+        let r = activeRowIndex[b];
+        if (r > 2) continue;
+
+        const rowStartIdx = r * SEATS_PER_ROW;
+        const rowEndIdx = rowStartIdx + SEATS_PER_ROW;
+
+        for (let i = rowStartIdx; i < rowEndIdx; i++) {
+          if (!benches[b][i].occupied) {
+            benches[b][i] = {
+              occupied: true,
+              type: 'single',
+              groupId: 888
+            };
+            totalFilledSeats++;
+            filledAny = true;
+          }
+        }
+
+        if (filledAny) {
+          activeRowIndex[b]++;
+          showToast(`Koorbank ${b} (Rij ${r + 1}) gevuld met Single Riders!`);
+          playBeep(650, 0.1);
+          break;
+        }
+      }
+
+      if (!filledAny) {
+        showToast("Geen openstaande actieve rijen om aan te vullen!");
+      }
+
+      renderAllBenches();
+      updateCounter();
+    }
+
+    function updateCounter() {
+      const txt = `${totalFilledSeats} / ${TOTAL_SEATS}`;
+      document.getElementById('totalCounter').innerText = txt;
+      const mobCounter = document.getElementById('mobileCounter');
+      if (mobCounter) mobCounter.innerText = txt;
+
+      const eff = Math.round((totalFilledSeats / TOTAL_SEATS) * 100);
+      document.getElementById('efficiencyScore').innerText = `${eff}%`;
+
+      const dispatchBtn = document.getElementById('dispatchBtn');
+      const mobileDispatchBtn = document.getElementById('mobileDispatchBtn');
+
+      if (totalFilledSeats >= TOTAL_SEATS) {
+        if (dispatchBtn) dispatchBtn.classList.add('pulse-glow', 'animate-bounce');
+        if (mobileDispatchBtn) mobileDispatchBtn.classList.add('pulse-glow', 'animate-bounce');
+      } else {
+        if (dispatchBtn) dispatchBtn.classList.remove('pulse-glow', 'animate-bounce');
+        if (mobileDispatchBtn) mobileDispatchBtn.classList.remove('pulse-glow', 'animate-bounce');
+      }
+    }
+
+    function dispatchRide() {
+      const eff = Math.round((totalFilledSeats / TOTAL_SEATS) * 100);
+      document.getElementById('statFilled').innerText = totalFilledSeats;
+      document.getElementById('statEff').innerText = `${eff}%`;
+
+      document.getElementById('rideModal').classList.remove('hidden');
+
+      playBeep(300, 0.2, 'triangle');
+      setTimeout(() => playBeep(450, 0.3, 'sine'), 150);
+      setTimeout(() => playBeep(600, 0.4, 'sine'), 300);
+    }
+
+    function finishRide() {
+      document.getElementById('rideModal').classList.add('hidden');
+      initBenches();
+      showToast("Nieuwe laadronde gestart!");
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.classList.remove('opacity-0');
+      toast.classList.add('opacity-100');
+      
+      clearTimeout(window.toastTimer);
+      window.toastTimer = setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+      }, 2600);
+    }
+
+    function alertModal(title, body) {
+      document.getElementById('modalTitle').innerText = title;
+      document.getElementById('modalBody').innerText = body;
+      document.getElementById('customModal').classList.remove('hidden');
+    }
+
+    function closeCustomModal() {
+      document.getElementById('customModal').classList.add('hidden');
+    }
+
+    function openSettingsModal() {
+      alertModal('Instellingen', 'Danse Macabre Tablet & Mobile Console. 6 koorbanken met 3 rijen van 6 stoelen (108 stoelen totaal).');
+    }
+
+    window.onload = function() {
+      initBenches();
+    };
+  </script>
+</body>
+</html>
